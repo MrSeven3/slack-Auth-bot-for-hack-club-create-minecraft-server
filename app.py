@@ -5,6 +5,8 @@ import mysql.connector
 import requests
 from dotenv import load_dotenv
 
+testing = True
+
 load_dotenv()
 # Initializes your app with your bot token and socket mode handler
 app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
@@ -21,6 +23,11 @@ def log_error(error):
     app.client.chat_postMessage(
         markdown_text="An error occurred! `"+error+"`",
         channel="C0ACZLB1K5L"
+    )
+def send_message(message,channel):
+    app.client.chat_postMessage(
+        markdown_text=str(message),
+        channel=str(channel)
     )
 
 #sends the command to pterodactyl to add a player to the allowlist
@@ -81,6 +88,21 @@ def register_player(ack,respond,command):
         log_error(str(e))
         respond("Something went very wrong! Please contact an admin, even if you can join the server! Give them the time that you ran this command.")
 
+@app.command("/suggest-mod")
+def forward_suggestion(ack, respond, command):
+    try:
+        ack()
+        send_message(
+            "A mod suggestion was made by "+str(command['user_id'])+"! The mod is called `" + str(command['text']) + "`",
+            "C0ACZLB1K5L"
+        )
+        respond("Your suggestion has been acknowledged, please be patient and do not spam the command. If we like the suggestion, we will add it.")
+        print("Suggestion logged")
+
+    except Exception as e:
+        log_error(str(e))
+        print(str(e))
+        respond("Something went very wrong! Please contact an admin and give them the time that you ran this command.")
 
 if __name__ == "__main__":
     SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"]).start()
