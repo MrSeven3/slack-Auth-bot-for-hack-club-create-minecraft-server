@@ -1,20 +1,27 @@
 import os
-
-from flask import Flask, request
+from slack_bolt import App
+from slack_bolt.adapter.socket_mode import SocketModeHandler
 import mysql.connector
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-app = Flask(__name__)
+# Initializes your app with your bot token and socket mode handler
+app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 db = mysql.connector.connect(
     host="40.233.121.197",
     user="seven",
-    password=os.environ['DB_PASSWORD'],
+    password=os.environ.get('DB_PASSWORD'),
     port=2469
 )
 cursor = db.cursor()
+
+def log_error(error):
+    app.client.chat_postMessage(
+        markdown_text="An error occurred! `"+error+"`",
+        channel="C0ACZLB1K5L"
+    )
 
 #sends the command to pterodactyl to add a player to the allowlist
 def register_mc_account(account_name):
@@ -27,7 +34,6 @@ def register_mc_account(account_name):
     payload = {"command": "whitelist add "+account_name}
 
     response = requests.post(url, json=payload, headers=headers)
-
 
 
 #returns true if the server is currently running
@@ -44,32 +50,37 @@ def check_server_status():
     else:
         return False
 
-@app.route('/api/register',methods = ['POST'])
-def register_player():
-    data = request.form
+@app.command("/register-account")
+def register_player(ack,respond,command):
+    try:
+        ack()
 
-    slack_id = data.get("user_id")
-    username = data.get("text")
+        username = command['text']
+        slack_id = command['user_id']
 
-    cursor.execute("USE hc-mc-auth")
+        cursor.execute("USE `hc-mc-auth`")
 
-    #ai wrote the sql statement for checking if a user already exists, fight me im lazy
-    cursor.execute("SELECT 1 FROM authorized_users WHERE slack_user_id = %s LIMIT 1", (slack_id,))
-    if cursor.fetchone():
-        return "Error: You have already registered a minecraft account to your slack account. If you believe this is a mistake, or would like to change it, please contact an admin", 200
-    else:
-        server_running = check_server_status()
-        if server_running:
-            register_mc_account(username)
-
-            sql = "INSERT INTO `authorized_users` (`slack_user_id`,`minecraft_username`) VALUES (%s,%s)"
-            cursor.execute(sql,(slack_id,username))
-
-
-            return "Your account has been successfully registered! Join the server at `create-mc.hackclub.community`",200
+        #ai wrote the sql statement for checking if a user already exists, fight me im lazy
+        cursor.execute("SELECT 1 FROM authorized_users WHERE slack_id = %s LIMIT 1", (slack_id,))
+        if cursor.fetchone():
+            respond("Error: You have already registered a minecraft account to your slack account. If you believe this is a mistake, or would like to change it, please contact an admin")
         else:
-            return "The server is not running, or something else went wrong. Check the server status, or contact an admin!", 200
+            server_running = check_server_status()
+            if server_running:
+                register_mc_account(username)
+
+                sql = "INSERT INTO `authorized_users` (`slack_id`,`minecraft_username`,`registered`) VALUES (%s,%s,NOW())"
+                cursor.execute(sql,(slack_id,username))
+
+                db.commit()
+
+                respond("Your account has been successfully registered! Join the server at `create-mc.hackclub.community`")
+            else:
+                respond("The server is not running, or something else went wrong. Check the server status, or contact an admin!")
+    except Exception as e:
+        log_error(str(e))
+        respond("Something went very wrong! Please contact an admin, even if you can join the server! Give them the time that you ran this command.")
 
 
-if __name__ == '__main__':
-    app.run()
+if __name__ == "__main__":
+    SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"]).start()
