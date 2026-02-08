@@ -9,4 +9,4 @@ COPY . .
 
 EXPOSE 4348
 
-CMD [ "python", "-m", "flask", "run", "-p", "4348",  --host=0.0.0.0"]
+CMD [ "python", "-m", "flask", "run", "-p", "4348","--host=0.0.0.0"]

@@ -45,8 +45,7 @@ def check_server_status():
         return False
 
 @app.route('/api/register',methods = ['POST'])
-def register_player():  # put application's code here
-
+def register_player():
     data = request.form
 
     slack_id = data.get("user_id")
