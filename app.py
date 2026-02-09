@@ -3,6 +3,7 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 import mysql.connector
 import requests
+import re
 from dotenv import load_dotenv
 
 testing = True
@@ -43,6 +44,7 @@ def register_mc_account(account_name):
     response = requests.post(url, json=payload, headers=headers)
 
 
+
 #returns true if the server is currently running
 def check_server_status():
     url = "https://oracle.mrseven.tech/api/client/servers/48c5146d/resources"
@@ -61,8 +63,14 @@ def check_server_status():
 def register_player(ack,respond,command):
     try:
         ack()
+        print("Register command triggered")
 
         username = command['text']
+
+        if re.findall(r"[^a-zA-Z_]", username) or len(username) > 16:
+            print("Failed to register: username was invalid")
+            respond("That is not a valid Minecraft username! Please try again, or if you believe this was a mistake, contact an admin,")
+            return
         slack_id = command['user_id']
 
         cursor.execute("USE `hc-mc-auth`")
@@ -70,6 +78,7 @@ def register_player(ack,respond,command):
         #ai wrote the sql statement for checking if a user already exists, fight me im lazy
         cursor.execute("SELECT 1 FROM authorized_users WHERE slack_id = %s LIMIT 1", (slack_id,))
         if cursor.fetchone():
+            print("Failed to register: user already has an account registered")
             respond("Error: You have already registered a minecraft account to your slack account. If you believe this is a mistake, or would like to change it, please contact an admin")
         else:
             server_running = check_server_status()
@@ -82,10 +91,13 @@ def register_player(ack,respond,command):
                 db.commit()
 
                 respond("Your account has been successfully registered! Join the server at `create-mc.hackclub.community`")
+                print("Account successfully registered")
             else:
+                print("Failed to register: server not running")
                 respond("The server is not running, or something else went wrong. Check the server status, or contact an admin!")
     except Exception as e:
         log_error(str(e))
+        print("An error occurred: "+str(e))
         respond("Something went very wrong! Please contact an admin, even if you can join the server! Give them the time that you ran this command.")
 
 @app.command("/suggest-mod")
