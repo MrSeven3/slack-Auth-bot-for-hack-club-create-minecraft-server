@@ -6,7 +6,6 @@ import requests
 import re
 from dotenv import load_dotenv
 
-testing = True
 
 load_dotenv()
 # Initializes your app with your bot token and socket mode handler
@@ -62,10 +61,17 @@ def check_server_status():
 @app.command("/register-account")
 def register_player(ack,respond,command):
     try:
+        auth_disabled = bool(os.environ.get("AUTH_ENABLED"))
+
         ack()
         print("Register command triggered")
 
         username = command['text']
+
+        if auth_disabled:
+            print("Authorization to the server is currently disabled, not authorizing")
+            respond("Allowlisting your account to the server is currently disabled. Please try again later, or wait for an update from the admins")
+            return
 
         if re.findall(r"[^a-zA-Z_]", username) or len(username) > 16:
             print("Failed to register: username was invalid")
