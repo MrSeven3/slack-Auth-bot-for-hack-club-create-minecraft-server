@@ -61,7 +61,7 @@ def check_server_status():
 @app.command("/register-account")
 def register_player(ack,respond,command):
     try:
-        auth_disabled = bool(os.environ.get("AUTH_ENABLED"))
+        auth_disabled = bool(os.environ.get("AUTH_DISABLED"))
 
         ack()
         print("Register command triggered")
@@ -70,12 +70,12 @@ def register_player(ack,respond,command):
 
         if auth_disabled:
             print("Authorization to the server is currently disabled, not authorizing")
-            respond("Allowlisting your account to the server is currently disabled. Please try again later, or wait for an update from the admins")
+            respond("Allowlisting new accounts to the server is currently disabled. Please try again later, or wait for an update from the admins")
             return
 
-        if re.findall(r"[^a-zA-Z_]", username) or len(username) > 16:
+        if re.findall(r"[^a-zA-Z0-9_]", username) or len(username) > 16:
             print("Failed to register: username was invalid")
-            respond("That is not a valid Minecraft username! Please try again, or if you believe this was a mistake, contact an admin,")
+            respond("That is not a valid Minecraft username! Please try again, or if you believe this was a mistake, contact an admin")
             return
         slack_id = command['user_id']
 
