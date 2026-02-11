@@ -12,10 +12,10 @@ load_dotenv()
 app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 db = mysql.connector.connect(
-    host="40.233.121.197",
-    user="seven",
+    host=os.environ.get("DB_HOST"),
+    user=os.environ.get("DB_USERNAME"),
     password=os.environ.get('DB_PASSWORD'),
-    port=2469
+    port=os.environ.get("DB_PORT")
 )
 cursor = db.cursor()
 
@@ -109,18 +109,49 @@ def register_player(ack,respond,command):
 @app.command("/suggest-mod")
 def forward_suggestion(ack, respond, command):
     try:
+
+        blocks_data = """[{"type":"section","text":{"type":"mrkdwn","text":"`"""+command['text']+"""`"}},{"type":"actions","elements":[{"type":"button","text":{"type":"plain_text","emoji":true,"text":"Reject"},"style":"danger","value":"click_me_123","action_id":"reject_suggestion"}]}]"""
+
         ack()
-        send_message(
-            "A mod suggestion was made by "+str(command['user_id'])+"! The mod is called `" + str(command['text']) + "`",
-            "C0ACZLB1K5L"
+        app.client.chat_postMessage(
+            text="A new suggestion was made by "+command['user_name']+"["+command['user_id']+"]!",
+            channel="C0ACZLB1K5L"
         )
-        respond("Your suggestion has been acknowledged, please be patient and do not spam the command. If we like the suggestion, we will add it.")
+        app.client.chat_postMessage(
+            channel="C0ACZLB1K5L",
+            blocks = blocks_data
+        )
+        respond("Your suggestion has been acknowledged, please be patient and do not spam the command. If we like the suggestion, we will add it. If we don't you may see the rejection in #minecraft-create-rejected-mods.")
         print("Suggestion logged")
 
     except Exception as e:
         log_error(str(e))
         print(str(e))
         respond("Something went very wrong! Please contact an admin and give them the time that you ran this command.")
+
+@app.action("reject_suggestion")
+def reject_suggestion(ack,respond,body):
+    try:
+        ack()
+
+        mod_suggestion = body['message']['blocks'][0]['text']['text']
+        send_message("Mod "+ str(mod_suggestion) + " was rejected!","C0AE8PA1ZPC")
+
+        respond(""+str(mod_suggestion)+" was rejected!")
+    except Exception as e:
+        log_error(str(e))
+        print(str(e))
+        respond("Something went very wrong! Please contact an admin and give them the time that you ran this command.")
+
+@app.shortcut("admin_delete_message")
+def delete_bot_message(ack,shortcut,client):
+    try:
+        ack()
+
+        app.client.chat_delete(channel="C0ACZLB1K5L",ts=shortcut['message']['ts'])
+    except Exception as e:
+        log_error(str(e))
+        print(str(e))
 
 if __name__ == "__main__":
     SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"]).start()
