@@ -44,10 +44,19 @@ def register_mc_account(account_name):
 
     response = requests.post(url, json=payload, headers=headers)
 
+def run_server_command(command:str):
+    url = "https://oracle.mrseven.tech/api/client/servers/48c5146d/command"
 
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization":"Bearer "+ os.environ['PTERO_API_KEY']
+    }
+    payload = {"command": command}
+
+    response = requests.post(url, json=payload, headers=headers)
 
 #returns true if the server is currently running
-def check_server_status():
+def is_server_running():
     url = "https://oracle.mrseven.tech/api/client/servers/48c5146d/resources"
 
     headers = {
@@ -93,7 +102,7 @@ def register_player(ack,respond,command):
             print("Failed to register: user already has an account registered")
             respond("Error: You have already registered a minecraft account to your slack account. If you believe this is a mistake, or would like to change it, please contact an admin")
         else:
-            server_running = check_server_status()
+            server_running = is_server_running()
             if server_running:
                 register_mc_account(username)
 
@@ -115,7 +124,6 @@ def register_player(ack,respond,command):
 @app.command("/suggest-mod")
 def forward_suggestion(ack, respond, command):
     try:
-
         blocks_data = """[{"type":"section","text":{"type":"mrkdwn","text":"`"""+command['text']+"""`"}},{"type":"actions","elements":[{"type":"button","text":{"type":"plain_text","emoji":true,"text":"Reject"},"style":"danger","value":"click_me_123","action_id":"reject_suggestion"}]}]"""
 
         ack()
@@ -135,6 +143,18 @@ def forward_suggestion(ack, respond, command):
         print(str(e))
         respond("Something went very wrong! Please contact an admin and give them the time that you ran this command.")
 
+@app.message(re.compile(r"cms\.admin\.run_command.*"))
+def admin_send_command(say, context):
+    try:
+        if context['channel'] == "C0ACZLB1K5L":
+            if is_server_running():
+                admin_send_command(context['text'])
+                say("The command has been successfully sent to the server. For results, see the terminal at https://oracle.mrseven.tech/server/48c5146d")
+    except Exception as e:
+        log_error(str(e))
+        print(str(e))
+        say("Something went very wrong! You're an admin so uh idk fix it.")
+
 @app.action("reject_suggestion")
 def reject_suggestion(ack,respond,body):
     try:
@@ -153,7 +173,6 @@ def reject_suggestion(ack,respond,body):
 def delete_bot_message(ack,shortcut,client):
     try:
         ack()
-
         app.client.chat_delete(channel="C0ACZLB1K5L",ts=shortcut['message']['ts'])
     except Exception as e:
         log_error(str(e))
