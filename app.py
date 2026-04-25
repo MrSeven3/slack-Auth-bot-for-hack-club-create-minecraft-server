@@ -94,7 +94,7 @@ def register_player(ack,respond,command):
             return
         slack_id = command['user_id']
 
-        cursor.execute("USE `hc-mc-auth`")
+        cursor.execute("USE `create-mc`")
 
         #ai wrote the sql statement for checking if a user already exists, fight me im lazy
         cursor.execute("SELECT 1 FROM authorized_users WHERE slack_id = %s LIMIT 1", (slack_id,))
@@ -178,5 +178,5 @@ def reject_suggestion(ack,respond,body):
 #        log_error(str(e))
 #        print(str(e))
 
-
+print("starting bot")
 SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"]).start()
