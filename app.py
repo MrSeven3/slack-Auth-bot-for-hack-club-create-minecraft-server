@@ -133,8 +133,13 @@ def forward_suggestion(ack, respond, command):
         blocks_data = """[{"type":"section","text":{"type":"mrkdwn","text":"`"""+command['text']+"""`"}},{"type":"actions","elements":[{"type":"button","text":{"type":"plain_text","emoji":true,"text":"Reject"},"style":"danger","value":"click_me_123","action_id":"reject_suggestion"}]}]"""
 
         ack()
+
+        slack_id = command['user_id']
+        slack_userdata = app.client.users_profile_get(user=slack_id)
+        slack_display_name = slack_userdata['profile']['display_name_normalized']
+
         app.client.chat_postMessage(
-            text="A new suggestion was made by "+command['user_name']+"["+command['user_id']+"]!",
+            text="A new suggestion was made by "+slack_display_name+"["+command['user_id']+"]!",
             channel="C0ACZLB1K5L"
         )
         app.client.chat_postMessage(
